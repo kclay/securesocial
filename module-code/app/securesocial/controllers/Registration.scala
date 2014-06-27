@@ -20,6 +20,7 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.i18n.Messages
 import play.api.mvc.Action
+import play.api.mvc.RequestHeader
 import securesocial.core._
 import securesocial.core.authenticator.CookieAuthenticator
 import securesocial.core.providers.UsernamePasswordProvider
@@ -54,12 +55,12 @@ trait BaseRegistration[U] extends MailTokenBasedOperations[U] {
   val FirstName = "firstName"
   val LastName = "lastName"
 
-  val formWithUsername = Form[RegistrationInfo](
+  def formWithUsername(implicit request:RequestHeader) = Form[RegistrationInfo](
     mapping(
       UserName -> nonEmptyText.verifying(Messages(UserNameAlreadyTaken), userName => {
         // todo: see if there's a way to avoid waiting here :-\
         import scala.concurrent.duration._
-        Await.result(env.userService.find(providerId, userName), 20.seconds).isEmpty
+        Await.result(env.userService.find(providerId, userName,request), 20.seconds).isEmpty
       }),
       FirstName -> nonEmptyText,
       LastName -> nonEmptyText,
@@ -91,7 +92,7 @@ trait BaseRegistration[U] extends MailTokenBasedOperations[U] {
       (info => Some(info.firstName, info.lastName, ("", "")))
   )
 
-  val form = if (UsernamePasswordProvider.withUserNameSupport) formWithUsername else formWithoutUsername
+  def form(implicit request:RequestHeader) = if (UsernamePasswordProvider.withUserNameSupport) formWithUsername else formWithoutUsername
 
 
   /**
@@ -117,7 +118,7 @@ trait BaseRegistration[U] extends MailTokenBasedOperations[U] {
           val email = e.toLowerCase
           // check if there is already an account for this email address
           import scala.concurrent.ExecutionContext.Implicits.global
-          env.userService.findByEmailAndProvider(email, UsernamePasswordProvider.UsernamePassword).map {
+          env.userService.findByEmailAndProvider(email, UsernamePasswordProvider.UsernamePassword,request).map {
             maybeUser =>
               maybeUser match {
                 case Some(user) =>
@@ -125,7 +126,7 @@ trait BaseRegistration[U] extends MailTokenBasedOperations[U] {
                   env.mailer.sendAlreadyRegisteredEmail(user)
                 case None =>
                   import scala.concurrent.ExecutionContext.Implicits.global
-                  createToken(email, isSignUp = true).map { token =>
+                  createToken(email, isSignUp = true,request).map { token =>
                       env.mailer.sendSignUpEmail(email, token.uuid)
                   }
               }
@@ -184,8 +185,8 @@ trait BaseRegistration[U] extends MailTokenBasedOperations[U] {
               import securesocial.core.utils._
               val result = for (
                 toSave <- withAvatar;
-                saved <- env.userService.save(toSave, SaveMode.SignUp) ;
-                deleted <- env.userService.deleteToken(t.uuid)
+                saved <- env.userService.save(toSave, SaveMode.SignUp,request) ;
+                deleted <- env.userService.deleteToken(t.uuid,request)
               ) yield {
                 if (UsernamePasswordProvider.sendWelcomeEmail)
                   env.mailer.sendWelcomeEmail(newUser)

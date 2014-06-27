@@ -69,11 +69,11 @@ trait BasePasswordReset[U] extends MailTokenBasedOperations[U] {
       import scala.concurrent.ExecutionContext.Implicits.global
       startForm.bindFromRequest.fold(
         errors => Future.successful(BadRequest(env.viewTemplates.getStartResetPasswordPage(errors))),
-        email => env.userService.findByEmailAndProvider(email, UsernamePasswordProvider.UsernamePassword).map {
+        email => env.userService.findByEmailAndProvider(email, UsernamePasswordProvider.UsernamePassword,request).map {
           maybeUser =>
             maybeUser match {
               case Some(user) =>
-                createToken(email, isSignUp = false).map {
+                createToken(email, isSignUp = false,request).map {
                   token =>
                     env.mailer.sendPasswordResetEmail(user, token.uuid)
                 }
@@ -109,12 +109,12 @@ trait BasePasswordReset[U] extends MailTokenBasedOperations[U] {
       t => changePasswordForm.bindFromRequest.fold(errors =>
           Future.successful(BadRequest(env.viewTemplates.getResetPasswordPage(errors, token))),
       p =>
-          env.userService.findByEmailAndProvider(t.email, UsernamePasswordProvider.UsernamePassword).flatMap {
+          env.userService.findByEmailAndProvider(t.email, UsernamePasswordProvider.UsernamePassword,request).flatMap {
             case Some(profile) =>
               val hashed = env.currentHasher.hash(p._1)
               for (
-                updated <- env.userService.save(profile.copy(passwordInfo = Some(hashed)), SaveMode.PasswordChange);
-                deleted <- env.userService.deleteToken(token)
+                updated <- env.userService.save(profile.copy(passwordInfo = Some(hashed)), SaveMode.PasswordChange,request);
+                deleted <- env.userService.deleteToken(token,request)
               ) yield {
                 env.mailer.sendPasswordChangedNotice(profile)
                 val eventSession = Events.fire(new PasswordResetEvent(updated)).getOrElse(request.session)

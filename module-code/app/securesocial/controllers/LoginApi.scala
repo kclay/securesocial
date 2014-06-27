@@ -57,10 +57,10 @@ trait BaseLoginApi[U] extends SecureSocial[U] {
         provider.asInstanceOf[ApiSupport].authenticateForApi.flatMap {
           case authenticated: Authenticated =>
             val profile = authenticated.profile
-            env.userService.find(profile.providerId, profile.userId).flatMap {
+            env.userService.find(profile.providerId, profile.userId,request).flatMap {
               maybeExisting =>
                 val mode = if (maybeExisting.isDefined) SaveMode.LoggedIn else SaveMode.SignUp
-                env.userService.save(authenticated.profile, mode).flatMap {
+                env.userService.save(authenticated.profile, mode,request).flatMap {
                   userForAction =>
                     logger.debug(s"[securesocial] user completed authentication: provider = ${profile.providerId}, userId: ${profile.userId}, mode = $mode")
                     val evt = if (mode == SaveMode.LoggedIn) new LoginEvent(userForAction) else new SignUpEvent(userForAction)

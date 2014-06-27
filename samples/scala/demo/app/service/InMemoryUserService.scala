@@ -20,6 +20,7 @@ import play.api.Logger
 import securesocial.core._
 import securesocial.core.providers.{UsernamePasswordProvider, MailToken}
 import scala.concurrent.Future
+import play.api.mvc.RequestHeader
 import securesocial.core.services.{UserService, SaveMode}
 
 
@@ -37,7 +38,7 @@ class InMemoryUserService extends UserService[DemoUser] {
   //private var identities = Map[String, BasicProfile]()
   private var tokens = Map[String, MailToken]()
 
-  def find(providerId: String, userId: String): Future[Option[BasicProfile]] = {
+  def find(providerId: String, userId: String,request:RequestHeader): Future[Option[BasicProfile]] = {
     if ( logger.isDebugEnabled ) {
       logger.debug("users = %s".format(users))
     }
@@ -50,7 +51,7 @@ class InMemoryUserService extends UserService[DemoUser] {
     Future.successful(result.headOption)
   }
 
-  def findByEmailAndProvider(email: String, providerId: String): Future[Option[BasicProfile]] = {
+  def findByEmailAndProvider(email: String, providerId: String,request:RequestHeader): Future[Option[BasicProfile]] = {
     if ( logger.isDebugEnabled ) {
       logger.debug("users = %s".format(users))
     }
@@ -64,7 +65,7 @@ class InMemoryUserService extends UserService[DemoUser] {
     Future.successful(result.headOption)
   }
 
-  def save(user: BasicProfile, mode: SaveMode): Future[DemoUser] = {
+  def save(user: BasicProfile, mode: SaveMode,request:RequestHeader): Future[DemoUser] = {
     mode match {
       case SaveMode.SignUp =>
         val newUser = DemoUser(user, List(user))
@@ -92,7 +93,7 @@ class InMemoryUserService extends UserService[DemoUser] {
     }
   }
 
-  def link(current: DemoUser, to: BasicProfile): Future[DemoUser] = {
+  def link(current: DemoUser, to: BasicProfile,request:RequestHeader): Future[DemoUser] = {
     if ( current.identities.exists(i => i.providerId == to.providerId && i.userId == to.userId)) {
       Future.successful(current)
     } else {
@@ -103,18 +104,18 @@ class InMemoryUserService extends UserService[DemoUser] {
     }
   }
 
-  def saveToken(token: MailToken): Future[MailToken] = {
+  def saveToken(token: MailToken,request:RequestHeader): Future[MailToken] = {
     Future.successful {
       tokens += (token.uuid -> token)
       token
     }
   }
 
-  def findToken(token: String): Future[Option[MailToken]] = {
+  def findToken(token: String,request:RequestHeader): Future[Option[MailToken]] = {
     Future.successful { tokens.get(token) }
   }
 
-  def deleteToken(uuid: String): Future[Option[MailToken]] = {
+  def deleteToken(uuid: String,request:RequestHeader): Future[Option[MailToken]] = {
     Future.successful {
       tokens.get(uuid) match {
         case Some(token) =>
@@ -133,7 +134,7 @@ class InMemoryUserService extends UserService[DemoUser] {
     tokens = tokens.filter(!_._2.isExpired)
   }
 
-  override def updatePasswordInfo(user: DemoUser, info: PasswordInfo): Future[Option[BasicProfile]] = {
+  override def updatePasswordInfo(user: DemoUser, info: PasswordInfo,request:RequestHeader): Future[Option[BasicProfile]] = {
     Future.successful {
       for (
         found <- users.values.find(_ == user);
@@ -148,7 +149,7 @@ class InMemoryUserService extends UserService[DemoUser] {
     }
   }
 
-  override def passwordInfoFor(user: DemoUser): Future[Option[PasswordInfo]] = {
+  override def passwordInfoFor(user: DemoUser,request:RequestHeader): Future[Option[PasswordInfo]] = {
     Future.successful {
       for (
         found <- users.values.find(_ == user);

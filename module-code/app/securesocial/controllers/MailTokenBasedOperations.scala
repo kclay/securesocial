@@ -53,7 +53,7 @@ abstract class MailTokenBasedOperations[U] extends SecureSocial[U] {
    * @param isSignUp a boolean indicating if the token is used for a signup or password reset operation
    * @return a MailToken instance
    */
-  def createToken(email: String, isSignUp: Boolean): Future[MailToken] = {
+  def createToken(email: String, isSignUp: Boolean,request:RequestHeader): Future[MailToken] = {
     val uuid = UUID.randomUUID().toString
     val now = DateTime.now
 
@@ -64,7 +64,7 @@ abstract class MailTokenBasedOperations[U] extends SecureSocial[U] {
       isSignUp = isSignUp
     )
     import ExecutionContext.Implicits.global
-    env.userService.saveToken(token).map(_ => token)
+    env.userService.saveToken(token,request).map(_ => token)
   }
 
   /**
@@ -82,7 +82,7 @@ abstract class MailTokenBasedOperations[U] extends SecureSocial[U] {
                                (implicit request: RequestHeader): Future[SimpleResult] =
   {
     import ExecutionContext.Implicits.global
-    env.userService.findToken(token).flatMap {
+    env.userService.findToken(token,request).flatMap {
       case Some(t) if !t.isExpired && t.isSignUp == isSignUp => f(t)
       case _ =>
         val to = if ( isSignUp ) env.routes.signUpUrl else env.routes.resetPasswordUrl

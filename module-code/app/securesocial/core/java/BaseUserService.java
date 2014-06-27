@@ -21,6 +21,7 @@ import play.libs.Scala;
 import scala.*;
 import scala.Option;
 import scala.concurrent.Future;
+import play.api.mvc.RequestHeader;
 import securesocial.core.BasicProfile;
 import securesocial.core.PasswordInfo;
 import securesocial.core.providers.MailToken;
@@ -45,8 +46,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @return an optional user
      */
     @Override
-    public Future<Option<BasicProfile>> find(String providerId, String userId) {
-        return doFind(providerId, userId).map(new F.Function<BasicProfile, Option<BasicProfile>>() {
+    public Future<Option<BasicProfile>> find(String providerId, String userId,RequestHeader request) {
+        return doFind(providerId, userId,request).map(new F.Function<BasicProfile, Option<BasicProfile>>() {
             @Override
             public Option<BasicProfile> apply(BasicProfile user) throws Throwable {
                 return Scala.Option(user);
@@ -65,8 +66,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @return
      */
     @Override
-    public Future<Option<BasicProfile>> findByEmailAndProvider(String email, String providerId) {
-        return doFindByEmailAndProvider(email, providerId).map(new F.Function<BasicProfile, Option<BasicProfile>>() {
+    public Future<Option<BasicProfile>> findByEmailAndProvider(String email, String providerId,RequestHeader request) {
+        return doFindByEmailAndProvider(email, providerId,request).map(new F.Function<BasicProfile, Option<BasicProfile>>() {
             public Option<BasicProfile> apply(BasicProfile user) throws Throwable {
                 return Scala.Option(user);
             }
@@ -80,8 +81,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @param user
      */
     @Override
-    public Future<U> save(BasicProfile user, SaveMode mode) {
-        return doSave(user, mode).wrapped();
+    public Future<U> save(BasicProfile user, SaveMode mode,RequestHeader request) {
+        return doSave(user, mode,request).wrapped();
     }
 
     /**
@@ -91,13 +92,13 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @param to The Identity that needs to be linked to the current user
      */
     @Override
-    public Future<U> link(U current, BasicProfile to) {
-        return doLink(current, to).wrapped();
+    public Future<U> link(U current, BasicProfile to,RequestHeader request) {
+        return doLink(current, to,request).wrapped();
     }
 
     @Override
-    public Future<scala.Option<PasswordInfo>> passwordInfoFor(U user) {
-        return doPasswordInfoFor(user).map(new F.Function<PasswordInfo, Option<PasswordInfo>>() {
+    public Future<scala.Option<PasswordInfo>> passwordInfoFor(U user,RequestHeader request) {
+        return doPasswordInfoFor(user,request).map(new F.Function<PasswordInfo, Option<PasswordInfo>>() {
             @Override
             public Option<PasswordInfo> apply(PasswordInfo passwordInfo) throws Throwable {
                 return Scala.Option(passwordInfo);
@@ -106,8 +107,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
     }
 
     @Override
-    public Future<scala.Option<BasicProfile>> updatePasswordInfo(U user, PasswordInfo info) {
-        return doUpdatePasswordInfo(user, info).map(new F.Function<BasicProfile, Option<BasicProfile>>() {
+    public Future<scala.Option<BasicProfile>> updatePasswordInfo(U user, PasswordInfo info,RequestHeader request) {
+        return doUpdatePasswordInfo(user, info,request).map(new F.Function<BasicProfile, Option<BasicProfile>>() {
             @Override
             public Option<BasicProfile> apply(BasicProfile basicProfile) throws Throwable {
                 return Scala.Option(basicProfile);
@@ -126,8 +127,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @return A string with a uuid that will be embedded in the welcome email.
      */
     @Override
-    public Future<MailToken> saveToken(MailToken mailToken) {
-        return doSaveToken(Token.fromScala(mailToken)).map(new F.Function<Token, MailToken>() {
+    public Future<MailToken> saveToken(MailToken mailToken,RequestHeader request) {
+        return doSaveToken(Token.fromScala(mailToken),request).map(new F.Function<Token, MailToken>() {
             @Override
             public MailToken apply(Token token) throws Throwable {
                 return token.toScala();
@@ -145,8 +146,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @return
      */
     @Override
-    public Future<Option<MailToken>> findToken(String token) {
-        return doFindToken(token).map(new F.Function<Token, Option<MailToken>>() {
+    public Future<Option<MailToken>> findToken(String token,RequestHeader request) {
+        return doFindToken(token,request).map(new F.Function<Token, Option<MailToken>>() {
             @Override
             public Option<MailToken> apply(Token token) throws Throwable {
                 MailToken scalaToken =  token  != null ? token.toScala() : null;
@@ -164,8 +165,8 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @param uuid the token id
      */
     @Override
-    public Future<scala.Option<MailToken>> deleteToken(String uuid) {
-        return doDeleteToken(uuid).map(new F.Function<Token, Option<MailToken>>() {
+    public Future<scala.Option<MailToken>> deleteToken(String uuid,RequestHeader request) {
+        return doDeleteToken(uuid,request).map(new F.Function<Token, Option<MailToken>>() {
             @Override
             public Option<MailToken> apply(Token token) throws Throwable {
                 MailToken scalaToken =  token  != null ? token.toScala() : null;
@@ -192,7 +193,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      *
      * @param user
      */
-    public abstract F.Promise<U> doSave(BasicProfile user, SaveMode mode);
+    public abstract F.Promise<U> doSave(BasicProfile user, SaveMode mode,RequestHeader request);
 
     /**
      * Saves a token
@@ -202,7 +203,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      *
      * @param token
      */
-    public abstract F.Promise<Token> doSaveToken(Token token);
+    public abstract F.Promise<Token> doSaveToken(Token token,RequestHeader request);
 
     /**
      * Links the current user Identity to another
@@ -210,17 +211,17 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @param current The Identity of the current user
      * @param to The Identity that needs to be linked to the current user
      */
-    public abstract F.Promise<U> doLink(U current, BasicProfile to);
+    public abstract F.Promise<U> doLink(U current, BasicProfile to,RequestHeader request);
 
     /**
      * Finds the user in the backing store.
      * @return an Identity instance or null if no user matches the specified id
      */
-    public abstract F.Promise<BasicProfile> doFind(String providerId, String userId);
+    public abstract F.Promise<BasicProfile> doFind(String providerId, String userId,RequestHeader request);
 
-    public abstract F.Promise<PasswordInfo>  doPasswordInfoFor(U user);
+    public abstract F.Promise<PasswordInfo>  doPasswordInfoFor(U user,RequestHeader request);
 
-    public abstract F.Promise<BasicProfile> doUpdatePasswordInfo(U user, PasswordInfo info);
+    public abstract F.Promise<BasicProfile> doUpdatePasswordInfo(U user, PasswordInfo info,RequestHeader request);
 
     /**
      * Finds a token
@@ -231,7 +232,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @param tokenId the token id
      * @return a Token instance or null if no token matches the specified id
      */
-    public abstract F.Promise<Token> doFindToken(String tokenId);
+    public abstract F.Promise<Token> doFindToken(String tokenId,RequestHeader request);
 
 
     /**
@@ -244,7 +245,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * @param providerId - the provider id
      * @return an Identity instance or null if no user matches the specified id
      */
-    public abstract F.Promise<BasicProfile> doFindByEmailAndProvider(String email, String providerId);
+    public abstract F.Promise<BasicProfile> doFindByEmailAndProvider(String email, String providerId,RequestHeader request);
 
     /**
      * Deletes a token
@@ -254,7 +255,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      *
      * @param uuid the token id
      */
-    public abstract F.Promise<Token> doDeleteToken(String uuid);
+    public abstract F.Promise<Token> doDeleteToken(String uuid,RequestHeader request);
 
     /**
      * Deletes all expired tokens

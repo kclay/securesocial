@@ -107,9 +107,9 @@ trait BaseProviderController[U] extends SecureSocial[U]
         case authenticated: AuthenticationResult.Authenticated =>
           if ( authenticationFlow ) {
             val profile = authenticated.profile
-            env.userService.find(profile.providerId, profile.userId).flatMap { maybeExisting =>
+            env.userService.find(profile.providerId, profile.userId,request).flatMap { maybeExisting =>
               val mode = if (maybeExisting.isDefined) SaveMode.LoggedIn else SaveMode.SignUp
-              env.userService.save(authenticated.profile, mode).flatMap { userForAction =>
+              env.userService.save(authenticated.profile, mode,request).flatMap { userForAction =>
                 logger.debug(s"[securesocial] user completed authentication: provider = ${profile.providerId}, userId: ${profile.userId}, mode = $mode")
                 val evt = if (mode == SaveMode.LoggedIn) new LoginEvent(userForAction) else new SignUpEvent(userForAction)
                 val sessionAfterEvents = Events.fire(evt).getOrElse(request.session)
@@ -126,7 +126,7 @@ trait BaseProviderController[U] extends SecureSocial[U]
               request.user match {
                 case Some(currentUser) =>
                   for (
-                    linked <- env.userService.link(currentUser,  authenticated.profile) ;
+                    linked <- env.userService.link(currentUser,  authenticated.profile,request) ;
                     updatedAuthenticator <- request.authenticator.get.updateUser(linked) ;
                     result <- Redirect(toUrl(modifiedSession)).withSession(modifiedSession -
                       SecureSocial.OriginalUrlKey -

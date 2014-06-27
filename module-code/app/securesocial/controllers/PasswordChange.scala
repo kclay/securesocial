@@ -67,7 +67,7 @@ trait BasePasswordChange[U] extends SecureSocial[U] {
    */
   def checkCurrentPassword[A](suppliedPassword: String)(implicit request: SecuredRequest[A]): Future[Boolean] = {
     import ExecutionContext.Implicits.global
-     env.userService.passwordInfoFor(request.user).map {
+     env.userService.passwordInfoFor(request.user,request).map {
        case Some(info) =>
          env.passwordHashers.get(info.hasher).exists {
            _.matches(info, suppliedPassword)
@@ -95,7 +95,7 @@ trait BasePasswordChange[U] extends SecureSocial[U] {
         ((changeInfo: ChangeInfo) => Some("", ("", "")))
     )
 
-    env.userService.passwordInfoFor(request.user).flatMap {
+    env.userService.passwordInfoFor(request.user,request).flatMap {
       case Some(info) =>
         f(form)
       case None =>
@@ -129,7 +129,7 @@ trait BasePasswordChange[U] extends SecureSocial[U] {
           val newPasswordInfo = env.currentHasher.hash(info.newPassword)
           import ExecutionContext.Implicits.global
           implicit val userLang = request2lang(request)
-          env.userService.updatePasswordInfo(request.user, newPasswordInfo).map {
+          env.userService.updatePasswordInfo(request.user, newPasswordInfo,request).map {
             case Some(u) =>
               env.mailer.sendPasswordChangedNotice(u)(request, userLang)
               val result = Redirect(onHandlePasswordChangeGoTo).flashing(Success -> Messages(OkMessage)(userLang))

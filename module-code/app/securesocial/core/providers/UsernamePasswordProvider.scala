@@ -67,7 +67,7 @@ class UsernamePasswordProvider[U](userService: UserService[U],
       },
       credentials => {
         val userId = credentials._1.toLowerCase
-        userService.find(id, userId).flatMap { maybeUser =>
+        userService.find(id, userId,request).flatMap { maybeUser =>
             val loggedIn = for (
               user <- maybeUser;
               pinfo <- user.passwordInfo;

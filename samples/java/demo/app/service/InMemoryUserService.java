@@ -18,6 +18,8 @@ package service;
 
 import play.Logger;
 import play.libs.F;
+import play.api.mvc.RequestHeader;
+
 import securesocial.core.BasicProfile;
 import securesocial.core.PasswordInfo;
 import securesocial.core.services.SaveMode;
@@ -42,7 +44,7 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
     private HashMap<String, Token> tokens = new HashMap<String, Token>();
 
     @Override
-    public F.Promise<DemoUser> doSave(BasicProfile profile, SaveMode mode) {
+    public F.Promise<DemoUser> doSave(BasicProfile profile, SaveMode mode,RequestHeader request) {
         DemoUser result = null;
         if (mode == SaveMode.SignUp()) {
             result = new DemoUser(profile);
@@ -78,7 +80,7 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
     }
 
     @Override
-    public F.Promise<DemoUser> doLink(DemoUser current, BasicProfile to) {
+    public F.Promise<DemoUser> doLink(DemoUser current, BasicProfile to,RequestHeader request) {
         DemoUser target = null;
 
         for ( DemoUser u: users.values() ) {
@@ -105,13 +107,13 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
     }
 
     @Override
-    public F.Promise<Token> doSaveToken(Token token) {
+    public F.Promise<Token> doSaveToken(Token token,RequestHeader request) {
         tokens.put(token.uuid, token);
         return F.Promise.pure(token);
     }
 
     @Override
-    public F.Promise<BasicProfile> doFind(String providerId, String userId) {
+    public F.Promise<BasicProfile> doFind(String providerId, String userId,RequestHeader request) {
         if(logger.isDebugEnabled()){
             logger.debug("Finding user " + userId);
         }
@@ -130,23 +132,23 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
     }
 
     @Override
-    public F.Promise<PasswordInfo> doPasswordInfoFor(DemoUser user) {
+    public F.Promise<PasswordInfo> doPasswordInfoFor(DemoUser user,RequestHeader request) {
         throw new RuntimeException("doPasswordInfoFor is not implemented yet in sample app");
     }
 
     @Override
-    public F.Promise<BasicProfile> doUpdatePasswordInfo(DemoUser user, PasswordInfo info) {
+    public F.Promise<BasicProfile> doUpdatePasswordInfo(DemoUser user, PasswordInfo info,RequestHeader request) {
         throw new RuntimeException("doUpdatePasswordInfo is not implemented yet in sample app");
     }
 
     @Override
-    public F.Promise<Token> doFindToken(String tokenId) {
+    public F.Promise<Token> doFindToken(String tokenId,RequestHeader request) {
         return F.Promise.pure(tokens.get(tokenId));
     }
 
 
     @Override
-    public F.Promise<BasicProfile> doFindByEmailAndProvider(String email, String providerId) {
+    public F.Promise<BasicProfile> doFindByEmailAndProvider(String email, String providerId,RequestHeader request) {
         BasicProfile found = null;
 
         for ( DemoUser u: users.values() ) {
@@ -162,7 +164,7 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
     }
 
     @Override
-    public F.Promise<Token> doDeleteToken(String uuid) {
+    public F.Promise<Token> doDeleteToken(String uuid,RequestHeader request) {
         return F.Promise.pure(tokens.remove(uuid));
     }
 
