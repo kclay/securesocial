@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,8 +37,7 @@ class UsernamePasswordProvider[U](userService: UserService[U],
                                   avatarService: Option[AvatarService],
                                   viewTemplates: ViewTemplates,
                                   passwordHashers: Map[String, PasswordHasher])
-  extends IdentityProvider with ApiSupport
-{
+  extends IdentityProvider with ApiSupport {
 
   override val id = UsernamePasswordProvider.UsernamePassword
 
@@ -60,48 +59,48 @@ class UsernamePasswordProvider[U](userService: UserService[U],
     val form = UsernamePasswordProvider.loginForm.bindFromRequest()
     form.fold(
       errors => Future.successful {
-        if ( apiMode )
+        if (apiMode)
           AuthenticationResult.Failed("Invalid credentials")
         else
           AuthenticationResult.NavigationFlow(badRequest(errors)(request))
       },
       credentials => {
-        val userId = credentials._1.toLowerCase
-        userService.find(id, userId,request).flatMap { maybeUser =>
-            val loggedIn = for (
-              user <- maybeUser;
-              pinfo <- user.passwordInfo;
-              hasher <- passwordHashers.get(pinfo.hasher) if hasher.matches(pinfo, credentials._2)
-            ) yield {
-              user
-            }
+        val userId = credentials.username.toLowerCase
+        userService.find(id, userId, request).flatMap { maybeUser =>
+          val loggedIn = for (
+            user <- maybeUser;
+            pinfo <- user.passwordInfo;
+            hasher <- passwordHashers.get(pinfo.hasher) if hasher.matches(pinfo, credentials.password)
+          ) yield {
+            user
+          }
 
-            val authenticatedAndUpdated = for (
-              u <- loggedIn ;
-              service <- avatarService ;
-              email <- u.email
-            ) yield {
-              service.urlFor(email).map {
-                case avatar if avatar != u.avatarUrl => u.copy(avatarUrl = avatar)
-                case _ => u
-              } map {
-                Authenticated
-              }
+          val authenticatedAndUpdated = for (
+            u <- loggedIn;
+            service <- avatarService;
+            email <- u.email
+          ) yield {
+            service.urlFor(email).map {
+              case avatar if avatar != u.avatarUrl => u.copy(avatarUrl = avatar)
+              case _ => u
+            } map {
+              p => Authenticated(p, credentials.rememberMe)
             }
+          }
 
-            authenticatedAndUpdated.getOrElse {
-              Future.successful {
-                if ( apiMode )
-                  AuthenticationResult.Failed("Invalid credentials")
-                else
+          authenticatedAndUpdated.getOrElse {
+            Future.successful {
+              if (apiMode)
+                AuthenticationResult.Failed("Invalid credentials")
+              else
                 NavigationFlow(badRequest(UsernamePasswordProvider.loginForm, Some(InvalidCredentials)))
-              }
             }
+          }
         }
       })
   }
 
-  private def badRequest[A](f: Form[(String,String)], msg: Option[String] = None)(implicit request: Request[A]): SimpleResult = {
+  private def badRequest[A](f: Form[LoginInfo], msg: Option[String] = None)(implicit request: Request[A]): Result = {
     Results.BadRequest(viewTemplates.getLoginPage(f, msg))
   }
 }
@@ -115,10 +114,11 @@ object UsernamePasswordProvider {
   private val SignupSkipLogin = "securesocial.userpass.signupSkipLogin"
 
   val loginForm = Form(
-    tuple(
+    mapping(
       "username" -> nonEmptyText,
-      "password" -> nonEmptyText
-    )
+      "password" -> nonEmptyText,
+      "rememberMe" -> optional(boolean)
+    )(LoginInfo.apply)(LoginInfo.unapply)
   )
 
   lazy val withUserNameSupport = current.configuration.getBoolean(Key).getOrElse(false)
@@ -126,17 +126,20 @@ object UsernamePasswordProvider {
   lazy val hasher = current.configuration.getString(Hasher).getOrElse(PasswordHasher.id)
   lazy val enableTokenJob = current.configuration.getBoolean(EnableTokenJob).getOrElse(true)
   lazy val signupSkipLogin = current.configuration.getBoolean(SignupSkipLogin).getOrElse(false)
+  lazy val withRememberMe = true
 }
 
 /**
-  * A token used for reset password and sign up operations
+ * A token used for reset password and sign up operations
  *
-  * @param uuid the token id
-  * @param email the user email
-  * @param creationTime the creation time
-  * @param expirationTime the expiration time
-  * @param isSignUp a boolean indicating wether the token was created for a sign up action or not
-  */
+ * @param uuid the token id
+ * @param email the user email
+ * @param creationTime the creation time
+ * @param expirationTime the expiration time
+ * @param isSignUp a boolean indicating wether the token was created for a sign up action or not
+ */
 case class MailToken(uuid: String, email: String, creationTime: DateTime, expirationTime: DateTime, isSignUp: Boolean) {
   def isExpired = expirationTime.isBeforeNow
 }
+
+case class LoginInfo(username: String, password: String, rememberMe: Option[Boolean] =None)

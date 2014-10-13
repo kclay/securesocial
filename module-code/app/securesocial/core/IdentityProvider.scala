@@ -16,7 +16,7 @@
  */
 package securesocial.core
 
-import play.api.mvc.{SimpleResult, AnyContent, Request}
+import play.api.mvc.{Result, AnyContent, Request}
 import play.api.Play
 import concurrent.Future
 
@@ -104,13 +104,13 @@ object AuthenticationResult {
   /**
    * An intermetiate result during the authentication flow (maybe a redirection to the external provider page)
    */
-  case class NavigationFlow(result: SimpleResult) extends AuthenticationResult
+  case class NavigationFlow(result: Result) extends AuthenticationResult
 
   /**
    * Returned when the user was succesfully authenticated
    * @param profile the authenticated user profile
    */
-  case class Authenticated(profile: BasicProfile) extends AuthenticationResult
+  case class Authenticated(profile: BasicProfile,rememberMe:Option[Boolean]=None) extends AuthenticationResult
 
   /**
    * Returned when the authentication process failed for some reason.

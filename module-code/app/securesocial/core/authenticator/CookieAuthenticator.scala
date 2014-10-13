@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,7 @@
 package securesocial.core.authenticator
 
 import org.joda.time.DateTime
-import play.api.mvc.{Cookie, SimpleResult, DiscardingCookie, RequestHeader}
+import play.api.mvc.{Cookie, Result, DiscardingCookie, RequestHeader}
 import securesocial.core.IdentityProvider
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Play
@@ -44,7 +44,7 @@ case class CookieAuthenticator[U](id: String, user: U, expirationDate: DateTime,
                                   @transient
                                   store: AuthenticatorStore[CookieAuthenticator[U]]) extends StoreBackedAuthenticator[U, CookieAuthenticator[U]] {
   @transient
-  override val idleTimeoutInMinutes =  CookieAuthenticator.idleTimeout
+  override val idleTimeoutInMinutes = CookieAuthenticator.idleTimeout
 
   @transient
   override val absoluteTimeoutInSeconds = CookieAuthenticator.absoluteTimeoutInSeconds
@@ -72,7 +72,7 @@ case class CookieAuthenticator[U](id: String, user: U, expirationDate: DateTime,
    * @param result the result that is about to be sent to the client.
    * @return the result modified to signal the authenticator is no longer valid
    */
-  override def discarding(result: SimpleResult): Future[SimpleResult] = {
+  override def discarding(result: Result): Future[Result] = {
     import ExecutionContext.Implicits.global
     store.delete(id).map { _ =>
       result.discardingCookies(CookieAuthenticator.discardingCookie)
@@ -85,13 +85,13 @@ case class CookieAuthenticator[U](id: String, user: U, expirationDate: DateTime,
    * @param result the result that is about to be sent to the client
    * @return the result with the authenticator cookie set
    */
-  override def starting(result: SimpleResult): Future[SimpleResult] = {
+  override def starting(result: Result, rememberMe: Option[Boolean] = None): Future[Result] = {
     Future.successful {
       result.withCookies(
         Cookie(
           CookieAuthenticator.cookieName,
           id,
-          if (CookieAuthenticator.makeTransient)
+          if (rememberMe.getOrElse(CookieAuthenticator.makeTransient))
             CookieAuthenticator.Transient
           else Some(CookieAuthenticator.absoluteTimeoutInSeconds),
           CookieAuthenticator.cookiePath,
@@ -141,7 +141,9 @@ class CookieAuthenticatorBuilder[U](store: AuthenticatorStore[CookieAuthenticato
     import ExecutionContext.Implicits.global
     request.cookies.get(CookieAuthenticator.cookieName) match {
       case Some(cookie) => store.find(cookie.value).map { retrieved =>
-        retrieved.map { _.copy(store = store) }
+        retrieved.map {
+          _.copy(store = store)
+        }
       }
       case None => Future.successful(None)
     }
@@ -166,7 +168,9 @@ class CookieAuthenticatorBuilder[U](store: AuthenticatorStore[CookieAuthenticato
 }
 
 object CookieAuthenticator {
+
   import play.api.Play.current
+
   // todo: create settings object
 
   val Id = "cookie"

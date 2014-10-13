@@ -118,7 +118,7 @@ trait BaseProviderController[U] extends SecureSocial[U]
                   Redirect(toUrl(sessionAfterEvents)).withSession(sessionAfterEvents -
                     SecureSocial.OriginalUrlKey -
                     IdentityProvider.SessionId -
-                    OAuth1Provider.CacheKey).startingAuthenticator(authenticator)
+                    OAuth1Provider.CacheKey).startingAuthenticator(authenticator,authenticated.rememberMe)
                 }
               }
             }
